@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: ./visum
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./tmp:/tmp
+    networks:
+      - app_network
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    volumes:
+      - ./tmp:/tmp
+    networks:
+      - app_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"  # RabbitMQ default port
+      - "15672:15672"  # RabbitMQ management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
