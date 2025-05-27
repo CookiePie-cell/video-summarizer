@@ -6,6 +6,7 @@ import whisper
 import time
 import sys
 from multiprocessing import Process, current_process
+import google.generativeai as genai
 
 # Simple logger setup
 logger = logging.getLogger("transcriber")
@@ -24,6 +25,71 @@ username = os.environ.get('RABBITMQ_USERNAME', 'user')
 password = os.environ.get('RABBITMQ_PASSWORD', 'password')
 host = os.environ.get('RABBITMQ_HOST', 'rabbitmq')
 
+genai.configure(api_key="API_KEY")
+
+prompt = """"
+You are an AI agent tasked with analyzing the following transcript, which has been generated from a video, film, podcast, or other audio source. Your goal is to provide a comprehensive summary and insightful analysis and then write them as JSON string.
+
+Given the transcript, perform the following tasks where each topic is the json key and the value is the answer to the topic:
+
+1. Summary
+Write a clear, concise summary of the video content in 1–2 paragraphs.
+
+2. Topic Detection
+List the main topics or themes discussed. This would be a json list of string. The string has this format:
+"<topic>: <brief description of the topic>"
+
+Provide keywords or tags relevant to the video.
+
+3. Quote Extraction
+Identify 3–5 impactful, memorable, or insightful quotes with timestamps (if available). This would be a json list of string.
+
+4. Character or Speaker Insights
+Identify speakers or characters (based on names or context). This would be a json list of string.
+
+Describe their roles, opinions, or behaviors briefly.
+
+5. Sentiment Analysis
+Indicate the overall sentiment (positive, negative, neutral). This would be a json object with the following format:
+{
+    "sentiment": "positive/negative/neutral",
+    "description": "Brief description of the sentiment"
+} 
+
+Note any emotional changes or spikes across the video.
+
+7. Questions and Answers
+Extract any key questions posed and the answers provided. This would be a json list of objects with the following format:
+[
+    {
+        "question": "What is the question?",
+        "answer": "What is the answer?"
+    }
+]
+
+If there is no questions or answers provided, just write "There is no questions and answers in this transcription"
+
+8. Named Entity Recognition
+List important people, places, organizations, and concepts mentioned. This would be a json object with value as list of string with the following format:
+{
+    "People": ["Name of the entity"],
+    "Places": ["Name of the place"],
+    "Organizations": ["Name of the organization"],
+    "Concepts": ["Name of the concept]"
+}
+
+9. Content Classification
+Classify the video type: e.g., tutorial, interview, drama, vlog, documentary. Use the following json format:
+{
+    "type": "Motivational Speech / Personal Narrative",
+    "characteristics": e.g., ["Inspirational, Personal Growth, Storytelling"]
+}
+
+Optional: Is it educational, mature, comedic, etc.?
+
+Here is the transcript: 
+"""
+
 def run_whisper(file_path):
     try:
         logger.info(f"Running Whisper on file: {file_path}")
@@ -38,8 +104,13 @@ def process_task(file_path):
     process_name = current_process().name
     logger.info(f"[{process_name}] Transcribing: {file_path}")
     transcription = run_whisper(file_path)
+    model = genai.GenerativeModel("gemini-2.0-flash")
+
     if transcription:
-        logger.info(f"[{process_name}] Transcription completed: {transcription}")
+        logger.info(f"[{process_name}] Transcription completed")
+        logger.info(f"[{process_name}] Summarizing transcription")
+        response = model.generate_content(prompt + transcription)
+        logger.info(f"===== [{process_name}] Summary:\n{response.text} =====")
     else:
         logger.warning(f"[{process_name}] Transcription failed for {file_path}")
 
