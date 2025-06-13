@@ -101,7 +101,7 @@ Here is the transcript:
 def run_whisper(file_path):
     try:
         logger.info(f"Running Whisper on file: {file_path}")
-        model = whisper.load_model("base")
+        model = whisper.load_model("tiny")
         result = model.transcribe(file_path)
         return result["text"]
     except Exception as e:
