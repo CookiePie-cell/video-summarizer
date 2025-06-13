@@ -2,3 +2,5 @@ openai-whisper
 pika
 requests
 google-generativeai
+redis[hiredis]
+python-dotenv

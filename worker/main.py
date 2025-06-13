@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import json
 import logging
 import pika
@@ -7,6 +10,7 @@ import time
 import sys
 from multiprocessing import Process, current_process
 import google.generativeai as genai
+import redis
 
 # Simple logger setup
 logger = logging.getLogger("transcriber")
@@ -21,35 +25,41 @@ QUEUE = "visum.transcription.queue"
 EXCHANGE = "visum.exchange"
 ROUTING_KEY = "visum.transcription"
 
-username = os.environ.get('RABBITMQ_USERNAME', 'user')
-password = os.environ.get('RABBITMQ_PASSWORD', 'password')
-host = os.environ.get('RABBITMQ_HOST', 'rabbitmq')
+username = os.environ.get('RABBITMQ_USERNAME')
+password = os.environ.get('RABBITMQ_PASSWORD')
+host = os.environ.get('RABBITMQ_HOST')
 
-genai.configure(api_key="API_KEY")
+REDIS_HOST = os.environ.get('REDIS_HOST')
+REDIS_PORT = int(os.environ.get('REDIS_PORT'))
+
+genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
 
 prompt = """"
 You are an AI agent tasked with analyzing the following transcript, which has been generated from a video, film, podcast, or other audio source. Your goal is to provide a comprehensive summary and insightful analysis and then write them as JSON string.
 
 Given the transcript, perform the following tasks where each topic is the json key and the value is the answer to the topic:
 
-1. Summary
-Write a clear, concise summary of the video content in 1–2 paragraphs.
+1. summary
+Write a clear, concise summary of the video content in 1–4 paragraphs.
 
-2. Topic Detection
+2. bulletPoints
+Write a list of key points or highlights from the text. This should be a json list of string.
+
+3. topicIdentification
 List the main topics or themes discussed. This would be a json list of string. The string has this format:
 "<topic>: <brief description of the topic>"
 
 Provide keywords or tags relevant to the video.
 
-3. Quote Extraction
-Identify 3–5 impactful, memorable, or insightful quotes with timestamps (if available). This would be a json list of string.
+4. quoteExtraction
+Identify 3–5 impactful, memorable, or insightful quotes. This would be a json list of string.
 
-4. Character or Speaker Insights
+5. characterIdentification
 Identify speakers or characters (based on names or context). This would be a json list of string.
 
 Describe their roles, opinions, or behaviors briefly.
 
-5. Sentiment Analysis
+6. sentimentAnalysis
 Indicate the overall sentiment (positive, negative, neutral). This would be a json object with the following format:
 {
     "sentiment": "positive/negative/neutral",
@@ -58,7 +68,7 @@ Indicate the overall sentiment (positive, negative, neutral). This would be a js
 
 Note any emotional changes or spikes across the video.
 
-7. Questions and Answers
+7. qna
 Extract any key questions posed and the answers provided. This would be a json list of objects with the following format:
 [
     {
@@ -67,26 +77,24 @@ Extract any key questions posed and the answers provided. This would be a json l
     }
 ]
 
-If there is no questions or answers provided, just write "There is no questions and answers in this transcription"
+If there is no questions or answers provided, use an empty list.
 
-8. Named Entity Recognition
+8. namedEntities
 List important people, places, organizations, and concepts mentioned. This would be a json object with value as list of string with the following format:
 {
-    "People": ["Name of the entity"],
-    "Places": ["Name of the place"],
-    "Organizations": ["Name of the organization"],
-    "Concepts": ["Name of the concept]"
+    "people": ["Name of the entity"],
+    "places": ["Name of the place"],
+    "organizations": ["Name of the organization"],
 }
 
-9. Content Classification
+9. contentClassification
 Classify the video type: e.g., tutorial, interview, drama, vlog, documentary. Use the following json format:
 {
-    "type": "Motivational Speech / Personal Narrative",
+    "type": e.g., "Motivational Speech",
     "characteristics": e.g., ["Inspirational, Personal Growth, Storytelling"]
 }
 
-Optional: Is it educational, mature, comedic, etc.?
-
+PS: Do not include any additional text or explanations in your response. Just provide pure JSON String with the keys and values as specified above.
 Here is the transcript: 
 """
 
@@ -100,8 +108,13 @@ def run_whisper(file_path):
         logger.error(f"Whisper error: {e}")
         return None
 
-def process_task(file_path):
+def process_task(body_json):
     process_name = current_process().name
+    file_path = body_json.get('filePath')
+    job_id = f"job:{body_json.get('jobId')}"
+    r.hset(job_id, mapping={
+        'status': 'PROCESSING',
+    })
     logger.info(f"[{process_name}] Transcribing: {file_path}")
     transcription = run_whisper(file_path)
     model = genai.GenerativeModel("gemini-2.0-flash")
@@ -110,8 +123,20 @@ def process_task(file_path):
         logger.info(f"[{process_name}] Transcription completed")
         logger.info(f"[{process_name}] Summarizing transcription")
         response = model.generate_content(prompt + transcription)
-        logger.info(f"===== [{process_name}] Summary:\n{response.text} =====")
+        response_text = response.text
+        if response_text[0:8].strip() == "```json":
+            response_text = response_text[8:-3]
+        r.hset(job_id, mapping={
+            'status': 'COMPLETED',
+            "summaryResult": response_text,
+        })
+        logger.info(f"[{process_name}] Summary: {response_text}")
+        # logger.info(f"===== [{process_name}] Summary:\n{response.text} =====")
     else:
+        r.hset(job_id, mapping={
+            'status': 'FAILED',
+            'errorMessage': 'Transcription failed'
+        })
         logger.warning(f"[{process_name}] Transcription failed for {file_path}")
 
 def on_message(channel, method_frame, header_frame, body):
@@ -123,12 +148,10 @@ def on_message(channel, method_frame, header_frame, body):
             channel.basic_ack(method_frame.delivery_tag)
             return
 
-        # Spawn a new process for the task
-        p = Process(target=process_task, args=(file_path,))
+        p = Process(target=process_task, args=(body_json,))
         p.start()
 
         # Immediately ACK the message to avoid duplicate processing
-        # (You could also delay ack until after transcription, if you want stronger reliability)
         logger.info("Acknowledging message...")
         channel.basic_ack(method_frame.delivery_tag)
 
@@ -136,10 +159,31 @@ def on_message(channel, method_frame, header_frame, body):
         logger.error(f"Error processing message: {e}")
         channel.basic_nack(method_frame.delivery_tag, requeue=False)
 
-# --- RabbitMQ setup ---
-credentials = pika.PlainCredentials(username, password)
+
 max_attempts = 10
 delay_seconds = 3
+
+# --- Redis setup ---
+r = None
+for attempt in range(1, max_attempts + 1):
+    try:
+        logger.info(f"Connecting to Redis at {REDIS_HOST}:{REDIS_PORT} (attempt {attempt + 1}/10)...")
+        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+        r.ping()  # Test connection
+        break
+    except redis.ConnectionError as e:
+        r = None
+        if attempt < max_attempts:
+            logger.warning(f"Redis connection attempt {attempt} failed. Retrying...")
+            logger.info(f"Retrying in {delay_seconds} seconds...")
+            time.sleep(delay_seconds)
+        else:
+            logger.error(f"Failed to connect to Redis after multiple attempts: {e}")
+            sys.exit(1)
+
+# --- RabbitMQ setup ---
+credentials = pika.PlainCredentials(username, password)
+
 time.sleep(delay_seconds)
 
 connection = None
@@ -159,10 +203,11 @@ for attempt in range(1, max_attempts + 1):
     except Exception as e:
         logger.warning(f"Connection attempt {attempt} failed: {e}")
         if attempt < max_attempts:
+            logger.info(f"RabbitMQ connection attempt {attempt} failed. Retrying...")
             logger.info(f"Retrying in {delay_seconds} seconds...")
             time.sleep(delay_seconds)
         else:
-            logger.error("All connection attempts failed.")
+            logger.error(f"Failed to connect to RabbitMQ after multiple attempts: {e}")
             sys.exit(1)
 
 channel = connection.channel()

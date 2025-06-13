@@ -24,13 +24,12 @@ services:
       - "8080:8080"
     depends_on:
       - rabbitmq
+      - redis
+    env_file:
+      - ./visum/.env
     environment:
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=user
-      - SPRING_RABBITMQ_PASSWORD=password
-      - SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=50MB
-      - SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=50MB
+      - SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=100MB
+      - SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=100MB
     volumes:
       - ./tmp:/tmp
     networks:
@@ -42,11 +41,11 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - rabbitmq
+      - redis
+    env_file:
+      - ./worker/.env
     environment:
       - PYTHONUNBUFFERED=1  # Force Python to run unbuffered
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_USERNAME=user
-      - RABBITMQ_PASSWORD=password
       - LOG_LEVEL=DEBUG  # Control logging level via environment
     volumes:
       - ./tmp:/tmp
@@ -59,6 +58,19 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  redis:
+    image: redis:8
+    container_name: redis
+    ports:
+      - "6379:6379"  # Optional: expose port to host for testing
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+
 networks:
   app_network:
     driver: bridge
+
+volumes:
+  redis_data:
