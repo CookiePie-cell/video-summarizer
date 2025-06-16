@@ -28,6 +28,8 @@ ROUTING_KEY = "visum.transcription"
 username = os.environ.get('RABBITMQ_USERNAME')
 password = os.environ.get('RABBITMQ_PASSWORD')
 host = os.environ.get('RABBITMQ_HOST')
+port = os.environ.get("RABBITMQ_PORT")
+vhost = os.environ.get("RABBITMQ_VHOST")
 
 REDIS_HOST = os.environ.get('REDIS_HOST')
 REDIS_PORT = int(os.environ.get('REDIS_PORT'))
@@ -201,8 +203,8 @@ for attempt in range(1, max_attempts + 1):
         logger.info(f"Connecting to RabbitMQ (attempt {attempt}/{max_attempts})...")
         connection_params = pika.ConnectionParameters(
             host=host,
-            port=5672,
-            virtual_host="/",
+            port=port,
+            virtual_host=vhost,
             credentials=credentials,
             heartbeat=5
         )
