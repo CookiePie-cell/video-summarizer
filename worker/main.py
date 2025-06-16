@@ -176,7 +176,6 @@ for attempt in range(1, max_attempts + 1):
             port=REDIS_PORT,
             username=REDIS_USERNAME,
             password=REDIS_PASSWORD,
-            ssl=True,
             decode_responses=True
         )
         r.ping()  # Test connection
