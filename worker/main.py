@@ -88,7 +88,7 @@ List important people, places, organizations, and concepts mentioned. This would
 }
 
 9. contentClassification
-Classify the video type: e.g., tutorial, interview, drama, vlog, documentary. Use the following json format:
+Classify the audio genre: e.g., tutorial, interview, drama, vlog, documentary. Use the following json format:
 {
     "type": e.g., "Motivational Speech",
     "characteristics": e.g., ["Inspirational, Personal Growth, Storytelling"]
@@ -101,7 +101,7 @@ Here is the transcript:
 def run_whisper(file_path):
     try:
         logger.info(f"Running Whisper on file: {file_path}")
-        model = whisper.load_model("tiny")
+        model = whisper.load_model("tiny", download_root="./models")
         result = model.transcribe(file_path)
         return result["text"]
     except Exception as e:

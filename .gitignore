@@ -1,3 +1,4 @@
 tmp
 worker/.env
 visum/.env
+whisper-models/

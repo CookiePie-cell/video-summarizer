@@ -49,6 +49,7 @@ services:
       - LOG_LEVEL=DEBUG  # Control logging level via environment
     volumes:
       - ./tmp:/tmp
+      - ./whisper-models:/app/models
     networks:
       - app_network
     # Ensure logs are properly captured
