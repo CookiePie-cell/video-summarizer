@@ -13,4 +13,3 @@ __pycache__/
 tests/
 tmp/
 logs/
-../whisper-models/

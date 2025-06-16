@@ -31,6 +31,8 @@ host = os.environ.get('RABBITMQ_HOST')
 
 REDIS_HOST = os.environ.get('REDIS_HOST')
 REDIS_PORT = int(os.environ.get('REDIS_PORT'))
+REDIS_USERNAME = os.environ.get('username')
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
 
 genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
 
@@ -101,7 +103,7 @@ Here is the transcript:
 def run_whisper(file_path):
     try:
         logger.info(f"Running Whisper on file: {file_path}")
-        model = whisper.load_model("tiny", download_root="./models")
+        model = whisper.load_model("tiny")
         result = model.transcribe(file_path)
         return result["text"]
     except Exception as e:
@@ -168,7 +170,15 @@ r = None
 for attempt in range(1, max_attempts + 1):
     try:
         logger.info(f"Connecting to Redis at {REDIS_HOST}:{REDIS_PORT} (attempt {attempt + 1}/10)...")
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+        # r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+        r = redis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            username=REDIS_USERNAME,
+            password=REDIS_PASSWORD,
+            ssl=True,
+            decode_responses=True
+        )
         r.ping()  # Test connection
         break
     except redis.ConnectionError as e:
