@@ -180,6 +180,7 @@ for attempt in range(1, max_attempts + 1):
             password=REDIS_PASSWORD,
             decode_responses=True
         )
+        logger.info("Connected to Redis.")
         r.ping()  # Test connection
         break
     except redis.ConnectionError as e:
