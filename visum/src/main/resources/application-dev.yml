@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: visum
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: user
+    password: password
+    virtual-host: /

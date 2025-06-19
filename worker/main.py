@@ -20,21 +20,25 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+app_env = os.environ.get("APP_ENV", "dev")
+
 # RabbitMQ config
 QUEUE = "visum.transcription.queue"
 EXCHANGE = "visum.exchange"
 ROUTING_KEY = "visum.transcription"
 
-username = os.environ.get('RABBITMQ_USERNAME')
-password = os.environ.get('RABBITMQ_PASSWORD')
-host = os.environ.get('RABBITMQ_HOST')
-port = os.environ.get("RABBITMQ_PORT")
-vhost = os.environ.get("RABBITMQ_VHOST")
+# RabbitMQ
+username = os.environ.get('RABBITMQ_USERNAME') if app_env == "prod" else "user"
+password = os.environ.get('RABBITMQ_PASSWORD') if app_env == "prod" else "password"
+host = os.environ.get('RABBITMQ_HOST', 'rabbitmq')
+port = int(os.environ.get('RABBITMQ_PORT', 5672))
+vhost = os.environ.get('RABBITMQ_VHOST') if app_env == "prod" else "/"
 
-REDIS_HOST = os.environ.get('REDIS_HOST')
-REDIS_PORT = int(os.environ.get('REDIS_PORT'))
-REDIS_USERNAME = os.environ.get('username')
-REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD')
+# Redis
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+REDIS_USERNAME = os.environ.get('REDIS_USERNAME') if app_env == "prod" else None
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD') if app_env == "prod" else None
 
 genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
 

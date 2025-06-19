@@ -17,10 +17,10 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int port;
 
-    @Value("${spring.data.redis.username}")
+    @Value("${spring.data.redis.username:}")
     private String username;
 
-    @Value("${spring.data.redis.password}")
+    @Value("${spring.data.redis.password:}")
     private String password;
 
     @Bean
