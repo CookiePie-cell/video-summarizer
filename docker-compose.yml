@@ -1,21 +1,4 @@
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"  # RabbitMQ default port
-      - "15672:15672"  # RabbitMQ management UI
-    environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
-    networks:
-      - app_network
-    # Simple healthcheck to know when rabbitmq is ready
-    healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     build:
       context: ./visum
@@ -23,7 +6,6 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - rabbitmq
       - redis
     env_file:
       - ./visum/.env
@@ -34,13 +16,41 @@ services:
       - ./tmp:/tmp
     networks:
       - app_network
+#    restart: on-failure
 
-  worker:
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    networks:
+      - app_network
+
+  fastapi:
     build:
       context: ./worker
-      dockerfile: Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
     depends_on:
-      - rabbitmq
+      - redis
+    env_file:
+      - ./worker/.env
+    networks:
+      - app_network
+#    restart: on-failure
+
+  worker:
+    shm_size: 512mb
+    build:
+      context: ./worker
+    command: celery -A celery_worker worker --loglevel=info --pool=solo
+    depends_on:
       - redis
     env_file:
       - ./worker/.env
@@ -49,7 +59,6 @@ services:
       - LOG_LEVEL=DEBUG  # Control logging level via environment
     volumes:
       - ./tmp:/tmp
-      - ./whisper-models:/app/models
     networks:
       - app_network
     # Ensure logs are properly captured
@@ -58,6 +67,19 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+#    restart: on-failure
+  nextjs:
+    build:
+      context: ./visum-front-end  # Adjust path to where your Next.js folder lives
+    ports:
+      - "3000:3000"
+    depends_on:
+      - app
+    environment:
+      - NEXT_PUBLIC_API_URL=http://springboot:8080
+    networks:
+      - app_network
+
 
   redis:
     image: redis:8
@@ -68,6 +90,12 @@ services:
       - redis_data:/data
     networks:
       - app_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+#    restart: on-failure
 
 networks:
   app_network:

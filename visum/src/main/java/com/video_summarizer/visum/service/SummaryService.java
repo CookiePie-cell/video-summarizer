@@ -1,10 +1,14 @@
 package com.video_summarizer.visum.service;
 
+import com.video_summarizer.visum.model.ProcessResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
 public interface SummaryService {
 
-    Map<String, String> sendSummaryRequest(MultipartFile file);
+    ProcessResponse sendSummaryRequest(String keyName);
+//    Map<String, String> sendSummaryRequest(String fileName);
+
 }
+

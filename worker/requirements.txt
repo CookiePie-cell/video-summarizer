@@ -3,3 +3,7 @@ requests
 google-generativeai
 redis[hiredis]
 python-dotenv
+celery
+fastapi[standard]
+uvicorn[standard]
+boto3

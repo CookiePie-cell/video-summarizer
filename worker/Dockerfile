@@ -13,14 +13,13 @@
 ## Run the app
 #CMD ["python", "main.py"]
 
-FROM python:3.11-slim
+FROM python:3.11-bullseye
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg libsndfile1 build-essential && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
 # Pre-install torch and numpy (to avoid redownloading during whisper install)
@@ -38,10 +37,19 @@ RUN pip install --no-cache-dir openai-whisper
 
 # clean up
 RUN rm -rf ~/.cache/pip
+#
+#RUN useradd -u 1000 -m appuser && \
+#    mkdir -p /tmp && chown -R appuser:appuser /app /tmp
+#
+#USER appuser
 
 COPY . .
 
-CMD ["python", "main.py"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+#CMD ["celery", "-A", "main", "worker", "--loglevel=info"]
+#CMD ["celery", "-A", "main", "worker", "--loglevel=info", "--pool=solo"]
+
+
 
 
 

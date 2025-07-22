@@ -30,6 +30,7 @@ public class RedisConfig {
         config.setPort(port);
         config.setUsername(username);
         config.setPassword(password);
+        config.setDatabase(2);
 
         LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
                 .build();

@@ -2,3 +2,5 @@ tmp
 worker/.env
 visum/.env
 whisper-models/
+visum-front-end/node_modules/
+visum-front-end/.env.local
