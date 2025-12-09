@@ -25,7 +25,7 @@ WORKDIR /app
 # Pre-install torch and numpy (to avoid redownloading during whisper install)
 RUN pip install --no-cache-dir \
     numpy==1.26.3 \
-    torch==2.2.2+cpu torchvision==0.17.2+cpu torchaudio==2.2.2 \
+    torch==2.2.2+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt .

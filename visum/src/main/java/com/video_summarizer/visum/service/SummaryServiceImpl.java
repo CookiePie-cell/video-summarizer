@@ -25,37 +25,6 @@ public class SummaryServiceImpl implements SummaryService {
         this.jobService = jobService;
     }
 
-//    @Override
-//    public Map<String, String> sendSummaryRequest(String fileName) {
-//        Map<String, String> job = new HashMap<>();
-//        job.put("jobId", UUID.randomUUID().toString());
-//        job.put("fileName", fileName);
-//        job.put("status", "PENDING");
-//        job.put("errorMessage", null);
-//        job.put("createdAt", String.valueOf(System.currentTimeMillis()));
-//        job.put("summaryResult", null);
-//
-//        ObjectMapper objectMapper = new ObjectMapper();
-//
-//        try {
-//            String jobJson = objectMapper.writeValueAsString(job);
-//            String key = "job:" + job.get("jobId");
-//            jobService.saveData(key, job);
-//            rabbitTemplate.convertAndSend(
-//                    RabbitConfig.EXCHANGE_NAME,
-//                    RabbitConfig.ROUTING_KEY,
-//                    jobJson
-//            );
-//        } catch (JsonProcessingException e) {
-//            throw new RuntimeException("Failed to convert job to JSON: " + e.getMessage());
-//        }
-//
-//        Map<String, String> res = new HashMap<>();
-//        res.put("jobId", job.get("jobId"));
-//        res.put("status", job.get("status"));
-//        return res;
-//    }
-
     @Override
     public ProcessResponse sendSummaryRequest(String keyName) {
         Map<String, String> job = new HashMap<>();

@@ -2,21 +2,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from celery import Celery
-from logger_setup import logger
 import os
 
 REDIS_HOST: str = os.environ.get('REDIS_HOST', 'redis')
 REDIS_PORT: int = int(os.environ.get('REDIS_PORT', 6379))
-REDIS_USERNAME: str = os.environ.get('REDIS_USERNAME')
-REDIS_PASSWORD: str = os.environ.get('REDIS_PASSWORD')
+
 
 def build_redis_url(db: int) -> str:
-    if REDIS_USERNAME and REDIS_PASSWORD:
-        return f"redis://{REDIS_USERNAME}:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{db}"
-    elif REDIS_PASSWORD:
-        return f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{db}"
-    else:
-        return f"redis://{REDIS_HOST}:{REDIS_PORT}/{db}"
+    return f"redis://{REDIS_HOST}:{REDIS_PORT}/{db}"
 
 broker_url: str = build_redis_url(0)
 backend_url: str = build_redis_url(1)

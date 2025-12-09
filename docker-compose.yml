@@ -12,6 +12,11 @@ services:
     environment:
       - SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=100MB
       - SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=100MB
+      - MINIO_URL=http://127.0.0.1:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_REGION=${MINIO_REGION}
     volumes:
       - ./tmp:/tmp
     networks:
@@ -25,8 +30,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     command: server /data --console-address ":9001"
     networks:
       - app_network
@@ -34,6 +39,8 @@ services:
   fastapi:
     build:
       context: ./worker
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
@@ -55,37 +62,41 @@ services:
     env_file:
       - ./worker/.env
     environment:
-      - PYTHONUNBUFFERED=1  # Force Python to run unbuffered
-      - LOG_LEVEL=DEBUG  # Control logging level via environment
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=DEBUG
+      - MINIO_URL=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_REGION=${MINIO_REGION}
     volumes:
       - ./tmp:/tmp
     networks:
       - app_network
-    # Ensure logs are properly captured
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 #    restart: on-failure
+
   nextjs:
     build:
-      context: ./visum-front-end  # Adjust path to where your Next.js folder lives
+      context: ./visum-front-end
     ports:
       - "3000:3000"
     depends_on:
       - app
     environment:
-      - NEXT_PUBLIC_API_URL=http://springboot:8080
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     networks:
       - app_network
-
 
   redis:
     image: redis:8
     container_name: redis
     ports:
-      - "6379:6379"  # Optional: expose port to host for testing
+      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:

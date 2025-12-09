@@ -19,7 +19,7 @@ public class S3ClientConfig {
     @Bean
     public S3Presigner se3Presigner() {
         return S3Presigner.builder()
-                .endpointOverride(URI.create("http://127.0.0.1:9000"))
+                .endpointOverride(URI.create(minioProperties.getUrl()))
                 .credentialsProvider(() -> AwsBasicCredentials.create(
                         minioProperties.getAccessKey(),
                         minioProperties.getSecretKey()

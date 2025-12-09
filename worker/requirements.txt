@@ -1,6 +1,6 @@
 pika
 requests
-google-generativeai
+google-genai
 redis[hiredis]
 python-dotenv
 celery
