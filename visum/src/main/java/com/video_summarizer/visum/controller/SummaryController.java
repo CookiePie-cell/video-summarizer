@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 @RestController
 public class SummaryController {
     private final SummaryService summaryService;
@@ -24,13 +24,6 @@ public class SummaryController {
          this.summaryService = summaryService;
          this.fileStorageService = fileStorageService;
      }
-
-//     @PostMapping("/send-summary-request")
-//    public ResponseEntity<ProcessResponse> sendSummaryRequest(@RequestParam("file") MultipartFile file) {
-//         ProcessResponse response = summaryService.sendSummaryRequest(file);
-//         System.out.println("SUMMARY_RESPONSE: " + response.toString());
-//         return ResponseEntity.ok(response);
-//     }
 
     @PostMapping("/send-summary-request")
     public ResponseEntity<ProcessResponse> sendSummaryRequest(String file) {
